@@ -55,13 +55,11 @@ and some JS::
 Events
 ======
 
-**Slides.transitionStart**
+transitionStart
+  trigger when the user transition is started, normaly when a user click next or previous slide
 
-    trigger when the user transition is started, normaly when a user click next or previous slide
-
-**Slides.transitionComplete**
-
-    trigger when the transition is complete and the slider is in a stable state again.
+transitionComplete
+  trigger when the transition is complete and the slider is in a stable state again.
 
 DefaultSlideUI
 ==============
@@ -69,12 +67,10 @@ DefaultSlideUI
 **parameters:**
 
 ui-node
-
-    a single node, this is where the slider will be rendered
+  a single node, this is where the slider will be rendered
 
 ui-nodes
-
-    a list of DOM nodes containing our slides
+  a list of DOM nodes containing our slides
 
 
 Custom SlideUI

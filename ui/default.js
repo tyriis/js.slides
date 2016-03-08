@@ -95,7 +95,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird'], functio
             self.transition(0, self.slider.currentSlideNum, true);
         },
 
-        // @TODO move this to helper class
+        // TODO make use of css.js to replace the next two functions
         _addClassName: function(self, $node, className) {
             var nodeClassName = $node.className,
                 classNames = [];
@@ -112,7 +112,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird'], functio
             $node.className += ' ' + className;
         },
 
-        // @TODO move this to helper class
         _removeClassName: function(self, $node, className) {
             var nodeClassName = $node.className,
                 classNames = [];
