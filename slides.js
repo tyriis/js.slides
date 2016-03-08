@@ -33,6 +33,12 @@ define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPro
     return oop.Class({
         __name__: 'Slides',
 
+        __static__: {
+
+            VERSION: "0.1",
+
+        },
+
         __events__: [
             'change',
             'transitionStart',
