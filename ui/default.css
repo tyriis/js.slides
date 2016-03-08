@@ -1,0 +1,43 @@
+.slides {
+    overflow: hidden;
+    display: block;
+    position: relative;
+}
+
+.slides.is-first .slides__button--previous {
+    display: none;
+}
+
+.slides.is-last .slides__button--next {
+    display: none;
+}
+
+.slides__slides {
+    transition: transform 0.4s ease;
+}
+
+.slides__slides::after {
+    content: '';
+    display: block;
+    clear: left;
+}
+
+.slides__slides__slide {
+    display: block;
+    float: left;
+}
+
+.slides__button--previous,
+.slides__button--next {
+    position: absolute;
+    z-index: 100;
+    top: 50%;
+}
+
+.slides__button--previous {
+    left: 5px;
+}
+
+.slides__button--next {
+    right: 5px;
+}
