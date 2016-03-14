@@ -20,7 +20,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird'], functio
             if (self.numSlides() <= 1) {
                 self._addClassName(self.node, 'is-last');
             }
-            window.addEventListener('resize', self.__bind__('_windowResized'));
+            window.addEventListener('resize', self._windowResized);
         },
 
         transition: function(self, from, to, isForward) {
