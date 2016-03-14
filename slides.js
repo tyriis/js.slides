@@ -89,7 +89,7 @@ define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPro
                 next: index
             });
             self.currentSlideNum = index;
-            if (self.transition && !self.transition.isCancelled()) {
+            if (self.transition && !self.transition.isFulfilled) {
                 self.transition.cancel();
             }
             self.transition = self.ui.transition(previous, index, isForward);
@@ -99,7 +99,6 @@ define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPro
                     current: self.currentSlideNum
                 });
                 self.transition = null;
-            }).catch(BPromise.CancellationError, function() {
             });
         },
 
