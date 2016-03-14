@@ -4,6 +4,8 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird'], functio
 
     var isTouchDevice = 'ontouchstart' in window;
 
+    BPromise.config({cancellation: true});
+
     return oop.Class({
         __name__: 'DefaultSlidesUI',
 
@@ -20,7 +22,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird'], functio
             if (self.numSlides() <= 1) {
                 self._addClassName(self.node, 'is-last');
             }
-            window.addEventListener('resize', self.__bind__('_windowResized'));
+            window.addEventListener('resize', self._windowResized);
         },
 
         transition: function(self, from, to, isForward) {
@@ -35,9 +37,12 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird'], functio
                 self._removeClassName(self.node, 'is-last');
             }
             var left = -self.width * to;
-            return new BPromise(function(resolve, reject) {
+            return new BPromise(function(resolve, reject, onCancel) {
                 self.ul.style.transform = 'translateX(' + left + 'px)';
                 self.ul.style.msTransform = 'translateX(' + left + 'px)';
+                onCancel(function() {
+                    // define cancellation
+                });
             });
         },
 

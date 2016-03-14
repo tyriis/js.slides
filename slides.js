@@ -89,11 +89,11 @@ define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPro
                 next: index
             });
             self.currentSlideNum = index;
-            if (self.transition && self.transition.isCancellable()) {
+            if (self.transition && !self.transition.isCancelled()) {
                 self.transition.cancel();
             }
             self.transition = self.ui.transition(previous, index, isForward);
-            self.transition.cancellable().then(function() {
+            self.transition.then(function() {
                 self.trigger('transitionComplete', {
                     previous: previous,
                     current: self.currentSlideNum
