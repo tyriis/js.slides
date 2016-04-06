@@ -95,7 +95,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _windowResized: function(self) {
             self.width = self.node.offsetWidth;
-            self.ul.style.width = (4 * self.node.offsetWidth) + 'px';
+            self.ul.style.width = (self.slideNodes.length * self.width) + 'px';
             for (var i = 0; i < self.slideNodes.length; i++) {
                 self.slideNodes[i].style.width = self.width + 'px';
             }
