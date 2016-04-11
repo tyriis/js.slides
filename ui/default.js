@@ -44,6 +44,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             var left = -self.width * to;
             return new BPromise(function(resolve, reject) {
                 self.ul.style.transform = 'translateX(' + left + 'px)';
+                self.ul.style.webkitTransform = 'translateX(' + left + 'px)';
                 self.ul.style.msTransform = 'translateX(' + left + 'px)';
                 self._currentLeft = left;
             });
@@ -152,6 +153,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             self._currentLeft = Math.round(self.initialLeft + adjustedDistance);
             self.ul.style.transform = 'translateX(' + self._currentLeft + 'px)';
+            self.ul.style.webkitTransform = 'translateX(' + self._currentLeft + 'px)';
             self.ul.style.msTransform = 'translateX(' + self._currentLeft + 'px)';
         },
 
@@ -181,6 +183,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _resetSlidePosition: function(self) {
             self.ul.style.transform = 'translateX(' + self.initialLeft + 'px)';
+            self.ul.style.webkitTransform = 'translateX(' + self.initialLeft + 'px)';
             self.ul.style.msTransform = 'translateX(' + self.initialLeft + 'px)';
         }
     });
