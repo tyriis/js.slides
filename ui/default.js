@@ -14,7 +14,8 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.config = config;
             self.node = config.node;
             self.slideNodes = [];
-            css.addClass(self.node, 'slides is-first');
+            css.addClass(self.node, 'slides');
+            css.addClass(self.node, 'is-first');
             self.width = self.node.offsetWidth;
             self._initSlides();
             self._initNextButton();
@@ -55,7 +56,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _initSlides: function(self) {
             self.ul = document.createElement('ul');
-            self.ul.className = 'slides__slides';
+            self.ul.className = 'slides__list';
             self.ul.style.width = self.width * self.config.nodes.length + 'px';
             self.ul.style.display = 'block';
             self.node.appendChild(self.ul);
@@ -63,7 +64,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             for (var i = 0; i < self.config.nodes.length; i++) {
                 var li = document.createElement('li');
                 li.style.width = self.width + 'px';
-                li.className = 'slides__slides__slide';
+                li.className = 'slides__slide';
                 li.appendChild(self.config.nodes[i]);
                 self.slideNodes.push(li);
                 self.ul.appendChild(li);

@@ -12,33 +12,33 @@
     display: none;
 }
 
-.slides__slides {
+.slides .slides__list {
     transition: transform 0.4s ease;
     -webkit-transition: -webkit-transform 0.4s ease;
 }
 
-.slides__slides::after {
+.slides .slides__list::after {
     content: '';
     display: block;
     clear: left;
 }
 
-.slides__slides__slide {
+.slides .slides__slide {
     display: block;
     float: left;
 }
 
-.slides__button--previous,
-.slides__button--next {
+.slides .slides__button--previous,
+.slides .slides__button--next {
     position: absolute;
     z-index: 100;
     top: 50%;
 }
 
-.slides__button--previous {
+.slides .slides__button--previous {
     left: 5px;
 }
 
-.slides__button--next {
+.slides .slides__button--next {
     right: 5px;
 }
