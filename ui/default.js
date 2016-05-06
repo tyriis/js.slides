@@ -4,19 +4,50 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
     var isTouchDevice = 'ontouchstart' in window;
 
+    var transitionEvent = function() {
+        var el = document.createElement('fakeelement');
+        var transitions = {
+            'transition': 'transitionend',
+            'OTransition': 'oTransitionEnd',
+            'MozTransition': 'transitionend',
+            'WebkitTransition': 'webkitTransitionEnd'
+        };
+
+        for (var t in transitions) {
+            if (el.style[t] !== undefined) {
+                return transitions[t];
+            }
+        }
+    }();
+
     return oop.Class({
         __name__: 'DefaultSlidesUI',
 
+        __static__: {
+            config: {
+                slidesToShow: 1,
+                autoSlide: false,
+                autoSlideSpeed: 2000,
+                infinite: false
+            }
+        },
+
         _currentLeft: 0,
+
+        _active: false,
 
         __init__: function(self, slider, config) {
             self.slider = slider;
-            self.config = config;
+            for (var key in config) {
+                self.config[key] = config[key];
+            }
             self.node = config.node;
             self.slideNodes = [];
             css.addClass(self.node, 'slides');
-            css.addClass(self.node, 'is-first');
-            self.width = self.node.offsetWidth;
+            if (!self.config.infinite) {
+                css.addClass(self.node, 'is-first');
+            }
+            self.width = self.node.offsetWidth / self.config.slidesToShow;
             self._initSlides();
             self._initNextButton();
             self._initPreviousButton();
@@ -25,28 +56,59 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             window.addEventListener('resize', self._windowResized);
             if (isTouchDevice) {
-                self.slideWidth = self.node.offsetWidth;
+                self.slideWidth = self.node.offsetWidth / self.config.slidesToShow;
             }
             self.node.addEventListener('touchstart', self._touchStartHandler);
+            self.node.addEventListener('click', self._clickHandler);
+            self.slider.on('transitionStart', self._updateButtons);
+            if (self.config.autoSlide) {
+                self._interval = setInterval(function() {
+                    self.slider.next();
+                }, self.config.autoSlideSpeed);
+            }
+            new BPromise(function(resolve, reject) {
+                css.addClass(self.ul, 'notransition');
+                self._transform(self.ul, -(self.width));
+                resolve();
+            }).then(function() {
+                css.removeClass(self.ul, 'notransition');
+            });
         },
 
         transition: function(self, from, to, isForward) {
-            if (self.slider.isFirstSlide()) {
-                css.addClass(self.node, 'is-first');
-            } else {
-                css.removeClass(self.node, 'is-first');
-            }
-            if (self.slider.isLastSlide()) {
-                css.addClass(self.node, 'is-last');
-            } else {
-                css.removeClass(self.node, 'is-last');
-            }
-            var left = -self.width * to;
+            var left = -self.width * to - self.width;
             return new BPromise(function(resolve, reject) {
-                self.ul.style.transform = 'translateX(' + left + 'px)';
-                self.ul.style.webkitTransform = 'translateX(' + left + 'px)';
-                self.ul.style.msTransform = 'translateX(' + left + 'px)';
+                var complete = function() {
+                    self.ul.removeEventListener(transitionEvent, complete);
+                    resolve();
+                };
+                if ((isForward && self.slider.isFirstSlide(to)) || (!isForward && to > from && self.slider.isLastSlide(to))) {
+                    complete = function() {
+                        self.ul.removeEventListener(transitionEvent, complete);
+                        new BPromise(function(resolve, reject) {
+                            css.addClass(self.ul, 'notransition');
+                            self._transform(self.ul, left);
+                            self._currentLeft = left;
+                            resolve();
+                        }).then(function() {
+                            css.removeClass(self.ul, 'notransition');
+                            resolve();
+                        });
+                    };
+                    transitionEvent && self.ul.addEventListener(transitionEvent, complete);
+                    var x = isForward ? self._currentLeft - self.width : 0;
+                    self._transform(self.ul, x);
+                    if (!transitionEvent) {
+                        resolve();
+                    }
+                    return;
+                }
+                transitionEvent && self.ul.addEventListener(transitionEvent, complete);
+                self._transform(self.ul, left);
                 self._currentLeft = left;
+                if (!transitionEvent) {
+                    resolve();
+                }
             });
         },
 
@@ -55,19 +117,29 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         _initSlides: function(self) {
+            var createLi = function(node) {
+                var li = document.createElement('li');
+                li.style.width = self.width + 'px';
+                li.className = 'slides__slide';
+                li.appendChild(node);
+                self.slideNodes.push(li);
+                self.ul.appendChild(li);
+            };
             self.ul = document.createElement('ul');
             self.ul.className = 'slides__list';
-            self.ul.style.width = self.width * self.config.nodes.length + 'px';
+            self.ul.style.width = self.width * (self.config.nodes.length + 2) + 'px';
             self.ul.style.display = 'block';
             self.node.appendChild(self.ul);
             self.config.nodes = Array.prototype.slice.call(self.config.nodes);
             for (var i = 0; i < self.config.nodes.length; i++) {
-                var li = document.createElement('li');
-                li.style.width = self.width + 'px';
-                li.className = 'slides__slide';
-                li.appendChild(self.config.nodes[i]);
-                self.slideNodes.push(li);
-                self.ul.appendChild(li);
+                createLi(self.config.nodes[i]);
+            }
+            for (var i = 0; i < self.slideNodes.length; i++) {
+                if (i === 0) {
+                    self.ul.appendChild(self.slideNodes[i].cloneNode(true));
+                } else if (i === self.slideNodes.length - 1) {
+                    self.ul.insertBefore(self.slideNodes[i].cloneNode(true), self.ul.firstChild);
+                }
             }
         },
 
@@ -75,11 +147,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.nextButton = document.createElement('button');
             self.nextButton.innerHTML = 'next';
             self.nextButton.className = 'slides__button--next';
-            self.nextButton.addEventListener('click', function() {
-                if (!self.slider.isLastSlide()) {
-                    self.slider.next();
-                }
-            });
+            self.nextButton.addEventListener('click', self.slider.next);
             self.node.appendChild(self.nextButton);
         },
 
@@ -87,16 +155,26 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.prevButton = document.createElement('button');
             self.prevButton.innerHTML = 'prev';
             self.prevButton.className = 'slides__button--previous';
-            self.prevButton.addEventListener('click', function() {
-                if (!self.slider.isFirstSlide()) {
-                    self.slider.prev();
-                }
-            });
+            self.prevButton.addEventListener('click', self.slider.prev);
             self.node.appendChild(self.prevButton);
         },
 
+        _updateButtons: function(self, event) {
+            if (self.config.infinite) {
+                return;
+            }
+            css.removeClass(self.node, 'is-first');
+            css.removeClass(self.node, 'is-last');
+            if (self.slider.isFirstSlide(event.next)) {
+                css.addClass(self.node, 'is-first');
+            } else if (self.slider.isLastSlide(event.next)) {
+                css.addClass(self.node, 'is-last');
+            }
+
+        },
+
         _windowResized: function(self) {
-            self.width = self.node.offsetWidth;
+            self.width = self.node.offsetWidth / self.config.slidesToShow;
             self.ul.style.width = (self.slideNodes.length * self.width) + 'px';
             for (var i = 0; i < self.slideNodes.length; i++) {
                 self.slideNodes[i].style.width = self.width + 'px';
@@ -152,9 +230,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 adjustedDistance = self.maxLeftDistance * (1 - Math.pow(1 - relativeDistance, 3));
             }
             self._currentLeft = Math.round(self.initialLeft + adjustedDistance);
-            self.ul.style.transform = 'translateX(' + self._currentLeft + 'px)';
-            self.ul.style.webkitTransform = 'translateX(' + self._currentLeft + 'px)';
-            self.ul.style.msTransform = 'translateX(' + self._currentLeft + 'px)';
+            self._transform(self.ul, self._currentLeft);
         },
 
         _touchEndHandler: function(self, event) {
@@ -182,10 +258,41 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         _resetSlidePosition: function(self) {
-            self.ul.style.transform = 'translateX(' + self.initialLeft + 'px)';
-            self.ul.style.webkitTransform = 'translateX(' + self.initialLeft + 'px)';
-            self.ul.style.msTransform = 'translateX(' + self.initialLeft + 'px)';
+            self._transform(self.ul, self.initialLeft);
+        },
+
+        _clickHandler: function(self, event) {
+            if (!self._active) {
+                self._active = true;
+                document.addEventListener('keyup', self._keyUpHandler);
+                document.addEventListener('click', self._globalClickHandler);
+            }
+        },
+
+        _keyUpHandler: function(self, event) {
+            var key = 'which' in event ? event.which : event.keyCode;
+            if (key === 37) {
+                return self.slider.prev();
+            } else if (key === 39) {
+                return self.slider.next();
+            }
+        },
+
+        _globalClickHandler: function(self, event) {
+            if (event.target === self.node || self.node.contains(event.target)) {
+                return;
+            }
+            document.removeEventListener('keyup', self._keyUpHandler);
+            document.removeEventListener('click', self._globalClickHandler);
+            self._active = false;
+        },
+
+        _transform: function(self, node, value) {
+            node.style.transform = 'translateX(' + value + 'px)';
+            node.style.webkitTransform = 'translateX(' + value + 'px)';
+            node.style.msTransform = 'translateX(' + value + 'px)';
         }
+
     });
 
 });

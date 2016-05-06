@@ -17,6 +17,13 @@
     -webkit-transition: -webkit-transform 0.4s ease;
 }
 
+.slides .slides__list.notransition {
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -o-transition: none !important;
+    transition: none !important;
+}
+
 .slides .slides__list::after {
     content: '';
     display: block;

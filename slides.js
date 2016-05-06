@@ -26,17 +26,18 @@
  * Licensee has his registered seat, an establishment or assets.
  */
 
-define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPromise) {
+define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPromise) {
 
-    "use strict";
+    'use strict';
 
     return oop.Class({
         __name__: 'Slides',
 
         __static__: {
-
-            VERSION: "0.1",
-
+            VERSION: '0.2',
+            config: {
+                slidesToScroll: 1,
+            }
         },
 
         __events__: [
@@ -46,12 +47,12 @@ define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPro
         ],
 
         __init__: function(self, config) {
-            self.config = config;
             var uiconf = {};
             for (var key in config) {
                 if (key.indexOf('ui-') === 0) {
                     uiconf[key.substr(3)] = config[key];
                 }
+                self.config[key] = config[key];
             }
             self.currentSlideNum = 0;
             self.ui = new config.ui(self, uiconf);
@@ -59,21 +60,23 @@ define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPro
 
         next: function(self) {
             if (self.isLastSlide()) {
-                self.slideTo(0, true);
-            } else {
-                self.slideTo(self.currentSlideNum + 1, true);
+                return self.slideTo(0, true);
             }
+            return self.slideTo(self.currentSlideNum + self.config.slidesToScroll, true);
         },
 
         prev: function(self) {
             if (self.isFirstSlide()) {
-                self.slideTo(self.numSlides() - 1, false);
-            } else {
-                self.slideTo(self.currentSlideNum - 1, false);
+                return self.slideTo(self.numSlides() - 1, false);
             }
+            return self.slideTo(self.currentSlideNum - self.config.slidesToScroll, false);
         },
 
         slideTo: function(self, index, isForward) {
+            if (self.transitionPending()) {
+                // pass
+                return BPromise.resolve();
+            }
             if (self.currentSlideNum === index) {
                 return;
             }
@@ -88,12 +91,9 @@ define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPro
                 current: self.currentSlideNum,
                 next: index
             });
-            self.currentSlideNum = index;
-            if (self.transition && !self.transition.isFulfilled) {
-                self.transition.cancel();
-            }
             self.transition = self.ui.transition(previous, index, isForward);
-            self.transition.then(function() {
+            return self.transition.then(function() {
+                self.currentSlideNum = index;
                 self.trigger('transitionComplete', {
                     previous: previous,
                     current: self.currentSlideNum
@@ -102,16 +102,26 @@ define('lib/score/slides', ['lib/score/oop', 'lib/bluebird'], function(oop, BPro
             });
         },
 
-        isFirstSlide: function(self) {
-            return self.currentSlideNum === 0;
+        isFirstSlide: function(self, index) {
+            if (index === undefined) {
+                index = self.currentSlideNum;
+            }
+            return index === 0;
         },
 
-        isLastSlide: function(self) {
-            return self.currentSlideNum === self.numSlides() - 1;
+        isLastSlide: function(self, index) {
+            if (index === undefined) {
+                index = self.currentSlideNum;
+            }
+            return index === self.numSlides() - 1;
         },
 
         numSlides: function(self) {
             return self.ui.numSlides();
+        },
+
+        transitionPending: function(self) {
+            return self.transition && self.transition.isPending();
         }
 
     });
