@@ -28,13 +28,12 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 slidesToShow: 1,
                 autoSlide: false,
                 autoSlideSpeed: 2000,
-                infinite: false
+                infinite: false,
+                showButtons: true,
             },
             _currentLeft: 0,
             _active: false,
         },
-
-
 
         __init__: function(self, slider, config) {
             self.slider = slider;
@@ -49,8 +48,10 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             self.width = self.node.offsetWidth / self.config.slidesToShow;
             self._initSlides();
-            self._initNextButton();
-            self._initPreviousButton();
+            if (self.config.showButtons) {
+                self._initNextButton();
+                self._initPreviousButton();
+            }
             if (self.numSlides() <= 1) {
                 css.addClass(self.node, 'is-last');
             }
@@ -62,12 +63,12 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.node.addEventListener('click', self._clickHandler);
             self.slider.on('transitionStart', self._updateButtons);
             if (self.config.autoSlide) {
-                self._interval = setInterval(function() {
-                    self.slider.next();
-                }, self.config.autoSlideSpeed);
+                self._startAutoSlide();
             }
             self._currentLeft = -(self.width * self.config.slidesToShow);
-            // 0s transition dont trigger transitionEnd Event ;(
+            // 0s transition don't trigger transitionEnd Event ;(
+            // so we use a Promise else the transition is visible when we remove
+            // the *notransition* class in the same cycle
             new BPromise(function(resolve, reject) {
                 css.addClass(self.ul, 'notransition');
                 self._transform(self.ul, self._currentLeft);
@@ -206,14 +207,14 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             } else if (self.slider.isLastSlide(event.next)) {
                 css.addClass(self.node, 'is-last');
             }
-
         },
 
         _windowResized: function(self) {
             self.width = self.node.offsetWidth / self.config.slidesToShow;
-            self.ul.style.width = (self.slideNodes.length * self.width) + 'px';
-            for (var i = 0; i < self.slideNodes.length; i++) {
-                self.slideNodes[i].style.width = self.width + 'px';
+            self.ul.style.width = self.width * (self.config.nodes.length + (self.config.slidesToShow * 2)) + 'px';
+            var nodes =  self.ul.getElementsByClassName('slides__slide');
+            for (var i = 0; i < nodes.length; i++) {
+                nodes[i].style.width = self.width + 'px';
             }
             self.transition(0, self.slider.currentSlideNum, true);
         },
@@ -324,10 +325,22 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         _transform: function(self, node, value) {
-            console.log(value);
             node.style.transform = 'translateX(' + value + 'px)';
             node.style.webkitTransform = 'translateX(' + value + 'px)';
             node.style.msTransform = 'translateX(' + value + 'px)';
+        },
+
+        startAutoSlide: function(self) {
+            self._interval = setInterval(function() {
+                if (!self.config.autoSlide) {
+                    clearInterval(self._interval);
+                }
+                self.slider.next();
+            }, self.config.autoSlideSpeed);
+        },
+
+        stopAutoSlide: function(self) {
+            self.config.autoSlide = false;
         }
 
     });

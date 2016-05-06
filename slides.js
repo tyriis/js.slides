@@ -34,7 +34,6 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
         __name__: 'Slides',
 
         __static__: {
-            VERSION: '0.2',
             config: {
                 slidesToScroll: 1,
             }
