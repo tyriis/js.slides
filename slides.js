@@ -59,17 +59,19 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
         },
 
         next: function(self) {
-            if (self.isLastSlide()) {
-                return self.slideTo(0, true);
+            var nextIndex = self.currentSlideNum + self.config.slidesToScroll;
+            if (nextIndex >= self.numSlides()) {
+                return self.slideTo(nextIndex - self.numSlides(), true);
             }
-            return self.slideTo(self.currentSlideNum + self.config.slidesToScroll, true);
+            return self.slideTo(nextIndex, true);
         },
 
         prev: function(self) {
-            if (self.isFirstSlide()) {
-                return self.slideTo(self.numSlides() - 1, false);
+            var nextIndex = self.currentSlideNum - self.config.slidesToScroll;
+            if (nextIndex < 0) {
+                return self.slideTo(self.numSlides() + nextIndex, false);
             }
-            return self.slideTo(self.currentSlideNum - self.config.slidesToScroll, false);
+            return self.slideTo(nextIndex, false);
         },
 
         slideTo: function(self, index, isForward) {

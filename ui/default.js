@@ -29,12 +29,12 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 autoSlide: false,
                 autoSlideSpeed: 2000,
                 infinite: false
-            }
+            },
+            _currentLeft: 0,
+            _active: false,
         },
 
-        _currentLeft: 0,
 
-        _active: false,
 
         __init__: function(self, slider, config) {
             self.slider = slider;
@@ -66,9 +66,11 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                     self.slider.next();
                 }, self.config.autoSlideSpeed);
             }
+            self._currentLeft = -(self.width * self.config.slidesToShow);
+            // 0s transition dont trigger transitionEnd Event ;(
             new BPromise(function(resolve, reject) {
                 css.addClass(self.ul, 'notransition');
-                self._transform(self.ul, -(self.width));
+                self._transform(self.ul, self._currentLeft);
                 resolve();
             }).then(function() {
                 css.removeClass(self.ul, 'notransition');
@@ -76,33 +78,22 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         transition: function(self, from, to, isForward) {
-            var left = -self.width * to - self.width;
+            var left = -self.width * to - (self.width * self.config.slidesToShow);
+            if (isForward && from > to) {
+                return self._nextTransition(left);
+            } else if (!isForward && to > from) {
+                return self._prevTransition(left);
+            }
+
+            return self._defaultTransition(left);
+        },
+
+        _defaultTransition: function(self, left) {
             return new BPromise(function(resolve, reject) {
-                var complete = function() {
+                var complete = function () {
                     self.ul.removeEventListener(transitionEvent, complete);
                     resolve();
                 };
-                if ((isForward && self.slider.isFirstSlide(to)) || (!isForward && to > from && self.slider.isLastSlide(to))) {
-                    complete = function() {
-                        self.ul.removeEventListener(transitionEvent, complete);
-                        new BPromise(function(resolve, reject) {
-                            css.addClass(self.ul, 'notransition');
-                            self._transform(self.ul, left);
-                            self._currentLeft = left;
-                            resolve();
-                        }).then(function() {
-                            css.removeClass(self.ul, 'notransition');
-                            resolve();
-                        });
-                    };
-                    transitionEvent && self.ul.addEventListener(transitionEvent, complete);
-                    var x = isForward ? self._currentLeft - self.width : 0;
-                    self._transform(self.ul, x);
-                    if (!transitionEvent) {
-                        resolve();
-                    }
-                    return;
-                }
                 transitionEvent && self.ul.addEventListener(transitionEvent, complete);
                 self._transform(self.ul, left);
                 self._currentLeft = left;
@@ -110,6 +101,50 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                     resolve();
                 }
             });
+        },
+
+        _nextTransition: function(self, left) {
+            return new BPromise(function(resolve, reject) {
+                new BPromise(function (resolve, reject) {
+                    css.addClass(self.ul, 'notransition');
+                    self._transform(self.ul, left + (self.slider.config.slidesToScroll * self.width));
+                    resolve();
+                }).then(function () {
+                    css.removeClass(self.ul, 'notransition');
+                    var complete = function () {
+                        self.ul.removeEventListener(transitionEvent, complete);
+                        resolve();
+                    };
+                    transitionEvent && self.ul.addEventListener(transitionEvent, complete);
+                    self._transform(self.ul, left);
+                    self._currentLeft = left;
+                    if (!transitionEvent) {
+                        resolve();
+                    }
+                });
+            });
+        },
+
+        _prevTransition: function(self, left) {
+            return new BPromise(function(resolve, reject) {
+                var complete = function() {
+                    self.ul.removeEventListener(transitionEvent, complete);
+                    new BPromise(function(resolve, reject) {
+                        css.addClass(self.ul, 'notransition');
+                        self._transform(self.ul, left);
+                        self._currentLeft = left;
+                        resolve();
+                    }).then(function() {
+                        css.removeClass(self.ul, 'notransition');
+                        resolve();
+                    });
+                };
+                transitionEvent && self.ul.addEventListener(transitionEvent, complete);
+                self._transform(self.ul, self._currentLeft + (self.width * self.slider.config.slidesToScroll));
+                if (!transitionEvent) {
+                    resolve();
+                }
+            })
         },
 
         numSlides: function(self) {
@@ -127,18 +162,19 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             };
             self.ul = document.createElement('ul');
             self.ul.className = 'slides__list';
-            self.ul.style.width = self.width * (self.config.nodes.length + 2) + 'px';
+            self.ul.style.width = self.width * (self.config.nodes.length + (self.config.slidesToShow * 2)) + 'px';
             self.ul.style.display = 'block';
             self.node.appendChild(self.ul);
             self.config.nodes = Array.prototype.slice.call(self.config.nodes);
             for (var i = 0; i < self.config.nodes.length; i++) {
                 createLi(self.config.nodes[i]);
             }
+            var firstNode = self.ul.firstChild;
             for (var i = 0; i < self.slideNodes.length; i++) {
-                if (i === 0) {
+                if (i < self.config.slidesToShow) {
                     self.ul.appendChild(self.slideNodes[i].cloneNode(true));
-                } else if (i === self.slideNodes.length - 1) {
-                    self.ul.insertBefore(self.slideNodes[i].cloneNode(true), self.ul.firstChild);
+                } else if (i >= (self.slideNodes.length - self.config.slidesToShow)) {
+                    self.ul.insertBefore(self.slideNodes[i].cloneNode(true), firstNode);
                 }
             }
         },
@@ -288,6 +324,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         _transform: function(self, node, value) {
+            console.log(value);
             node.style.transform = 'translateX(' + value + 'px)';
             node.style.webkitTransform = 'translateX(' + value + 'px)';
             node.style.msTransform = 'translateX(' + value + 'px)';
