@@ -83,6 +83,10 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _handleBreakPoint: function(self) {
             var screenWidth = (window.innerWidth > 0) ? window.innerWidth : screen.width;
+            if (screenWidth > screen.width) {
+                screenWidth = screen.width;
+            }
+
             var conf = {};
             for (var key in self.config.breakpoints) {
                 if (key <= screenWidth) {
@@ -93,7 +97,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 if (key.indexOf('ui-slidesToShow') === 0) {
                     self.config.slidesToShow = conf[key];
                 } else if (key.indexOf('slidesToScroll') === 0) {
-                    console.log('we are here');
                     self.slider.config[key] = conf[key];;
                 }
             }
@@ -447,7 +450,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         _lazyLoad: function(self, node) {
-
+            // extend the default UI to handle lazyLoad with a library / script of your choice
         }
 
     });
