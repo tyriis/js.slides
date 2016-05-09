@@ -46,7 +46,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             if (!self.config.infinite) {
                 css.addClass(self.node, 'is-first');
             }
-            self.width = self.node.offsetWidth / self.config.slidesToShow;
+            self.width = parseInt(self.node.offsetWidth / self.config.slidesToShow);
             self._initSlides();
             if (self.config.showButtons) {
                 self._initNextButton();
@@ -57,7 +57,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             window.addEventListener('resize', self._windowResized);
             if (isTouchDevice) {
-                self.slideWidth = self.node.offsetWidth / self.config.slidesToShow;
+                self.slideWidth = parseInt(self.node.offsetWidth / self.config.slidesToShow);
             }
             self.node.addEventListener('touchstart', self._touchStartHandler);
             self.node.addEventListener('click', self._clickHandler);
@@ -211,7 +211,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         _windowResized: function(self) {
-            self.width = self.node.offsetWidth / self.config.slidesToShow;
+            self.width = parseInt(self.node.offsetWidth / self.config.slidesToShow);
             self.ul.style.width = self.width * (self.config.nodes.length + (self.config.slidesToShow * 2)) + 'px';
             var nodes =  self.ul.getElementsByClassName('slides__slide');
             for (var i = 0; i < nodes.length; i++) {
@@ -347,9 +347,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         prev: function(self, event) {
             if (event && self.config.autoSlide) {
                 self.stopAutoSlide();
-            }
-            if (self.slider.transitionPending()) {
-                self._queueTransition(self.slider.prev);
+                if (self.slider.transitionPending()) {
+                    return self._queueTransition(self.slider.prev);
+                }
             }
             self.slider.prev();
         },
@@ -357,9 +357,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         next: function(self, event) {
             if (event && self.config.autoSlide) {
                 self.stopAutoSlide();
-            }
-            if (self.slider.transitionPending()) {
-                self._queueTransition(self.slider.next);
+                if (self.slider.transitionPending()) {
+                    return self._queueTransition(self.slider.next);
+                }
             }
             self.slider.next();
         },
@@ -367,14 +367,17 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         slideTo: function(self, index, isForward) {
             if (event && self.config.autoSlide) {
                 self.stopAutoSlide();
-            }
-            if (self.slider.transitionPending()) {
-                self._queueTransition(self.slider.slideTo, [index, isForward]);
+                if (self.slider.transitionPending()) {
+                    return self._queueTransition(self.slider.slideTo, [index, isForward]);
+                }
             }
             self.slider.slideTo(index, isForward);
         },
 
         _queueTransition: function(self, transition, args) {
+            if (!args && self._queued) {
+                return;
+            }
             self._queued = {
                 transition: transition,
                 args: args
@@ -387,8 +390,10 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             var queued = self._queued;
             self._queued = null;
-            queued.transition.apply(self, queued.args);
-        }
+            new BPromise(function(resolve, reject) {
+                queued.transition.apply(self, queued.args);
+            });
+        },
 
     });
 
