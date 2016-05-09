@@ -62,8 +62,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.node.addEventListener('touchstart', self._touchStartHandler);
             self.node.addEventListener('click', self._clickHandler);
             self.slider.on('transitionStart', self._updateButtons);
+            self.slider.on('transitionComplete', self._processQueued);
             if (self.config.autoSlide) {
-                self._startAutoSlide();
+                self.startAutoSlide();
             }
             self._currentLeft = -(self.width * self.config.slidesToShow);
             // 0s transition don't trigger transitionEnd Event ;(
@@ -184,7 +185,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.nextButton = document.createElement('button');
             self.nextButton.innerHTML = 'next';
             self.nextButton.className = 'slides__button--next';
-            self.nextButton.addEventListener('click', self.slider.next);
+            self.nextButton.addEventListener('click', self.next);
             self.node.appendChild(self.nextButton);
         },
 
@@ -192,7 +193,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.prevButton = document.createElement('button');
             self.prevButton.innerHTML = 'prev';
             self.prevButton.className = 'slides__button--previous';
-            self.prevButton.addEventListener('click', self.slider.prev);
+            self.prevButton.addEventListener('click', self.prev);
             self.node.appendChild(self.prevButton);
         },
 
@@ -276,9 +277,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.node.removeEventListener('touchmove', self._touchMoveHandler);
             if (self._touchLocation(event)[0] != self.initialMouseLeft) {
                 if (self._touchLocation(event)[0] > self.initialMouseLeft && self.slider.currentSlideNum - 1 >= 0) {
-                    self.slider.prev();
+                    self.prev(event);
                 } else if (self._touchLocation(event)[0] < self.initialMouseLeft && self.slider.currentSlideNum + 1 < self.slider.numSlides()) {
-                    self.slider.next();
+                    self.next(event);
                 } else {
                     self._resetSlidePosition();
                 }
@@ -309,9 +310,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         _keyUpHandler: function(self, event) {
             var key = 'which' in event ? event.which : event.keyCode;
             if (key === 37) {
-                return self.slider.prev();
+                return self.prev(event);
             } else if (key === 39) {
-                return self.slider.next();
+                return self.next(event);
             }
         },
 
@@ -333,14 +334,60 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         startAutoSlide: function(self) {
             self._interval = setInterval(function() {
                 if (!self.config.autoSlide) {
-                    clearInterval(self._interval);
+                    return clearInterval(self._interval);
                 }
-                self.slider.next();
+                self.next();
             }, self.config.autoSlideSpeed);
         },
 
         stopAutoSlide: function(self) {
             self.config.autoSlide = false;
+        },
+
+        prev: function(self, event) {
+            if (event && self.config.autoSlide) {
+                self.stopAutoSlide();
+            }
+            if (self.slider.transitionPending()) {
+                self._queueTransition(self.slider.prev);
+            }
+            self.slider.prev();
+        },
+
+        next: function(self, event) {
+            if (event && self.config.autoSlide) {
+                self.stopAutoSlide();
+            }
+            if (self.slider.transitionPending()) {
+                self._queueTransition(self.slider.next);
+            }
+            self.slider.next();
+        },
+
+        slideTo: function(self, index, isForward) {
+            if (event && self.config.autoSlide) {
+                self.stopAutoSlide();
+            }
+            if (self.slider.transitionPending()) {
+                self._queueTransition(self.slider.slideTo, [index, isForward]);
+            }
+            self.slider.slideTo(index, isForward);
+        },
+
+        _queueTransition: function(self, transition, args) {
+            self._queued = {
+                transition: transition,
+                args: args
+            };
+        },
+
+        _processQueued: function(self) {
+            if (!self._queued) {
+                return;
+            }
+            var queued = self._queued;
+            self._queued = null;
+            queued.transition.apply(self, queued.args);
         }
 
     });
