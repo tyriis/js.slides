@@ -99,7 +99,6 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
                     previous: previous,
                     current: self.currentSlideNum
                 });
-                self.transition = null;
             });
         },
 
