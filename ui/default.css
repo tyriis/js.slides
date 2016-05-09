@@ -2,6 +2,7 @@
     overflow: hidden;
     display: block;
     position: relative;
+    max-width: 100%;
 }
 
 .slides.is-first .slides__button--previous {

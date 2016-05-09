@@ -30,6 +30,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 autoSlideSpeed: 2000,
                 infinite: false,
                 showButtons: true,
+                breakpoints: {}
             },
             _currentLeft: 0,
             _active: false,
@@ -46,6 +47,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             if (!self.config.infinite) {
                 css.addClass(self.node, 'is-first');
             }
+            self._handleBreakPoint();
             self.width = parseInt(self.node.offsetWidth / self.config.slidesToShow);
             self._initSlides();
             if (self.config.showButtons) {
@@ -61,7 +63,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             self.node.addEventListener('touchstart', self._touchStartHandler);
             self.node.addEventListener('click', self._clickHandler);
-            self.slider.on('transitionStart', self._updateButtons);
+            self.slider.on('transitionStart', self._transitionStartHandler);
             self.slider.on('transitionComplete', self._processQueued);
             if (self.config.autoSlide) {
                 self.startAutoSlide();
@@ -77,6 +79,24 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }).then(function() {
                 css.removeClass(self.ul, 'notransition');
             });
+        },
+
+        _handleBreakPoint: function(self) {
+            var screenWidth = (window.innerWidth > 0) ? window.innerWidth : screen.width;
+            var conf = {};
+            for (var key in self.config.breakpoints) {
+                if (key <= screenWidth) {
+                    conf = self.config.breakpoints[key];
+                }
+            }
+            for (var key in conf) {
+                if (key.indexOf('ui-slidesToShow') === 0) {
+                    self.config.slidesToShow = conf[key];
+                } else if (key.indexOf('slidesToScroll') === 0) {
+                    console.log('we are here');
+                    self.slider.config[key] = conf[key];;
+                }
+            }
         },
 
         transition: function(self, from, to, isForward) {
@@ -164,19 +184,27 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             };
             self.ul = document.createElement('ul');
             self.ul.className = 'slides__list';
-            self.ul.style.width = self.width * (self.config.nodes.length + (self.config.slidesToShow * 2)) + 'px';
+            self.ul.style.width = parseInt(self.width * (self.config.nodes.length + (self.config.slidesToShow * 2))) + 'px';
             self.ul.style.display = 'block';
             self.node.appendChild(self.ul);
             self.config.nodes = Array.prototype.slice.call(self.config.nodes);
             for (var i = 0; i < self.config.nodes.length; i++) {
                 createLi(self.config.nodes[i]);
+                if (i < self.config.slidesToShow + self.slider.config.slidesToScroll ||
+                    i >= self.config.nodes.length - self.slider.config.slidesToScroll) {
+                        self._lazyLoad(self.slideNodes[i]);
+                }
             }
             var firstNode = self.ul.firstChild;
             for (var i = 0; i < self.slideNodes.length; i++) {
                 if (i < self.config.slidesToShow) {
-                    self.ul.appendChild(self.slideNodes[i].cloneNode(true));
+                    var clone = self.slideNodes[i].cloneNode(true);
+                    self.ul.appendChild(clone);
+                    self._lazyLoad(clone);
                 } else if (i >= (self.slideNodes.length - self.config.slidesToShow)) {
-                    self.ul.insertBefore(self.slideNodes[i].cloneNode(true), firstNode);
+                    var clone = self.slideNodes[i].cloneNode(true);
+                    self.ul.insertBefore(clone, firstNode);
+                    self._lazyLoad(clone);
                 }
             }
         },
@@ -197,6 +225,11 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.node.appendChild(self.prevButton);
         },
 
+        _transitionStartHandler: function(self, event) {
+            self._updateButtons(event);
+            self._lazyLoadImages(event);
+        },
+
         _updateButtons: function(self, event) {
             if (self.config.infinite) {
                 return;
@@ -210,7 +243,25 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
         },
 
+        _lazyLoadImages: function(self, event) {
+            if (event.current > event.next) {
+                for (var i = (event.next - self.slider.config.slidesToScroll); i < event.next; i++) {
+                    var node = self.slideNodes[i];
+                    self._lazyLoad(node);
+                }
+            } else if (event.current - event.next == self.slider.config.slidesToScroll) {
+
+            } else {
+                var first = event.next + self.config.slidesToShow;
+                for (var i = first; i < first + self.slider.config.slidesToScroll; i++) {
+                    var node = self.slideNodes[i];
+                    self._lazyLoad(node);
+                }
+            }
+        },
+
         _windowResized: function(self) {
+            self._handleBreakPoint();
             self.width = parseInt(self.node.offsetWidth / self.config.slidesToShow);
             self.ul.style.width = self.width * (self.config.nodes.length + (self.config.slidesToShow * 2)) + 'px';
             var nodes =  self.ul.getElementsByClassName('slides__slide');
@@ -394,6 +445,10 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 queued.transition.apply(self, queued.args);
             });
         },
+
+        _lazyLoad: function(self, node) {
+
+        }
 
     });
 
