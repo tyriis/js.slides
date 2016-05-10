@@ -70,15 +70,14 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             self._currentLeft = -(self.width * self.config.slidesToShow);
             // 0s transition don't trigger transitionEnd Event ;(
-            // so we use a Promise else the transition is visible when we remove
+            // so we use a Timeout else the transition is visible when we remove
             // the *notransition* class in the same cycle
-            new BPromise(function(resolve, reject) {
-                css.addClass(self.ul, 'notransition');
-                self._transform(self.ul, self._currentLeft);
-                resolve();
-            }).then(function() {
+
+            css.addClass(self.ul, 'notransition');
+            self._transform(self.ul, self._currentLeft);
+            setTimeout(function() {
                 css.removeClass(self.ul, 'notransition');
-            });
+            }, 10);
         },
 
         _handleBreakPoint: function(self) {
@@ -133,7 +132,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 new BPromise(function (resolve, reject) {
                     css.addClass(self.ul, 'notransition');
                     self._transform(self.ul, left + (self.slider.config.slidesToScroll * self.width));
-                    resolve();
+                    setTimeout(resolve, 10);
                 }).then(function () {
                     css.removeClass(self.ul, 'notransition');
                     var complete = function () {
@@ -158,7 +157,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                         css.addClass(self.ul, 'notransition');
                         self._transform(self.ul, left);
                         self._currentLeft = left;
-                        resolve();
+                        setTimeout(resolve, 10);
                     }).then(function() {
                         css.removeClass(self.ul, 'notransition');
                         resolve();
@@ -252,13 +251,22 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                     var node = self.slideNodes[i];
                     self._lazyLoad(node);
                 }
-            } else if (event.current - event.next == self.slider.config.slidesToScroll) {
-
-            } else {
+            } else if (event.next - event.current === self.slider.config.slidesToScroll) {
                 var first = event.next + self.config.slidesToShow;
                 for (var i = first; i < first + self.slider.config.slidesToScroll; i++) {
                     var node = self.slideNodes[i];
                     self._lazyLoad(node);
+                }
+            } else if (event.next > event.current) {
+                for (var i = event.next; i < self.slideNodes.length; i++) {
+                    self._lazyLoad(self.slideNodes[i]);
+                }
+                for (var i = event.next - self.slider.config.slidesToScroll; i < event.next; i++) {
+                    self._lazyLoad(self.slideNodes[i]);
+                }
+            } else {
+                for (var i = event.next; i < (event.next + self.config.slidesToShow + self.slider.config.slidesToScroll); i++) {
+                    self._lazyLoad(self.slideNodes[i]);
                 }
             }
         },
