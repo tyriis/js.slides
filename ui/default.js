@@ -87,7 +87,10 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self._transform(self.ul, self._currentLeft);
             setTimeout(function () {
                 css.removeClass(self.ul, 'notransition');
-            }, 10);
+                // trigger the _windowResized once to handle dom css node size changes
+                // this is a dirty workaround feel free to fix this problem :)
+                self._windowResized();
+            }, 50);
         },
 
         _handleBreakPoint: function(self) {
@@ -198,24 +201,24 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             };
             self.ul = document.createElement('ul');
             self.ul.className = 'slides__list';
-            self.ul.style.width = parseInt(self.width * (self.config.nodes.length + (self.config.slidesToShow * 2))) + 'px';
+            self.ul.style.width = parseInt(self.width * (self.config.nodes.length + (self.config.breakpoints.default['ui-slidesToShow'] * 2))) + 'px';
             self.ul.style.display = 'block';
             self.node.appendChild(self.ul);
             self.config.nodes = Array.prototype.slice.call(self.config.nodes);
             for (var i = 0; i < self.config.nodes.length; i++) {
                 createLi(self.config.nodes[i]);
-                if (i < self.config.slidesToShow + self.slider.config.slidesToScroll ||
+                if (i < self.config.breakpoints.default['ui-slidesToShow'] + self.slider.config.slidesToScroll ||
                     i >= self.config.nodes.length - self.slider.config.slidesToScroll) {
                         self._lazyLoad(self.slideNodes[i]);
                 }
             }
             var firstNode = self.ul.firstChild;
             for (var i = 0; i < self.slideNodes.length; i++) {
-                if (i < self.config.slidesToShow) {
+                if (i < self.config.breakpoints.default['ui-slidesToShow']) {
                     var clone = self.slideNodes[i].cloneNode(true);
                     self.ul.appendChild(clone);
                     self._lazyLoad(clone);
-                } else if (i >= (self.slideNodes.length - self.config.slidesToShow)) {
+                } else if (i >= (self.slideNodes.length - self.config.breakpoints.default['ui-slidesToShow'])) {
                     var clone = self.slideNodes[i].cloneNode(true);
                     self.ul.insertBefore(clone, firstNode);
                     self._lazyLoad(clone);
@@ -285,13 +288,18 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _windowResized: function(self) {
             self._handleBreakPoint();
+            if (!self.node.offsetWidth) {
+                self.ul.style.width = '100%';
+            }
+            console.log(self.node.offsetWidth);
             self.width = parseInt(self.node.offsetWidth / self.config.slidesToShow);
-            self.ul.style.width = self.width * (self.config.nodes.length + (self.config.slidesToShow * 2)) + 'px';
             var nodes =  self.ul.getElementsByClassName('slides__slide');
+            self.ul.style.width = self.width * (self.config.nodes.length + (self.config.breakpoints.default['ui-slidesToShow'] * 2)) + 'px';
             for (var i = 0; i < nodes.length; i++) {
                 nodes[i].style.width = self.width + 'px';
             }
             self.transition(0, self.slider.currentSlideNum, true);
+
         },
 
         _touchStartHandler: function(self, event) {
