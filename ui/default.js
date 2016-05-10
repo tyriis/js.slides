@@ -95,16 +95,15 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             if (screenWidth > screen.width) {
                 screenWidth = screen.width;
             }
+            screenWidth = parseInt(screenWidth);
 
-            var conf = self.config.breakpoints.default;
+            var breakpoint = 'default';
             for (var key in self.config.breakpoints) {
-                if (key === 'default') {
-                    continue;
-                }
-                if (screenWidth <= key) {
-                    conf = self.config.breakpoints[key];
+                if (key !== 'default' && screenWidth <= parseInt(key) && screenWidth > parseInt(breakpoint !== 'default' ? breakpoint : 0)) {
+                    breakpoint = key;
                 }
             }
+            var conf = self.config.breakpoints[breakpoint];
             for (var key in conf) {
                 if (key.indexOf('ui-slidesToShow') === 0) {
                     self.config.slidesToShow = conf[key];
