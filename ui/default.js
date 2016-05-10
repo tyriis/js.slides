@@ -30,7 +30,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 autoSlideSpeed: 2000,
                 infinite: false,
                 showButtons: true,
-                breakpoints: {}
+                breakpoints: {
+                    'default': {}
+                }
             },
             _currentLeft: 0,
             _active: false,
@@ -39,8 +41,16 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         __init__: function(self, slider, config) {
             self.slider = slider;
             for (var key in config) {
+                if (key === 'breakpoints') {
+                    for (var breakpoint in config[key]) {
+                        self.config.breakpoints[breakpoint] = config[key][breakpoint];
+                    }
+                    continue;
+                }
                 self.config[key] = config[key];
             }
+            self.config.breakpoints.default['slidesToScroll'] = self.slider.config.slidesToScroll;
+            self.config.breakpoints.default['ui-slidesToShow'] = self.config.breakpoints.default['ui-slidesToShow'] ? self.config.breakpoints.default['ui-slidesToShow'] : self.config.slidesToShow;
             self.node = config.node;
             self.slideNodes = [];
             css.addClass(self.node, 'slides');
@@ -75,7 +85,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
             css.addClass(self.ul, 'notransition');
             self._transform(self.ul, self._currentLeft);
-            setTimeout(function() {
+            setTimeout(function () {
                 css.removeClass(self.ul, 'notransition');
             }, 10);
         },
@@ -86,9 +96,12 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 screenWidth = screen.width;
             }
 
-            var conf = {};
+            var conf = self.config.breakpoints.default;
             for (var key in self.config.breakpoints) {
-                if (key <= screenWidth) {
+                if (key === 'default') {
+                    continue;
+                }
+                if (screenWidth <= key) {
                     conf = self.config.breakpoints[key];
                 }
             }
@@ -96,7 +109,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 if (key.indexOf('ui-slidesToShow') === 0) {
                     self.config.slidesToShow = conf[key];
                 } else if (key.indexOf('slidesToScroll') === 0) {
-                    self.slider.config[key] = conf[key];;
+                    self.slider.config[key] = conf[key];
                 }
             }
         },
