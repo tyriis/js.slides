@@ -1,3 +1,31 @@
+/**
+ * Copyright © 2015 STRG.AT GmbH, Vienna, Austria
+ *
+ * This file is part of the The SCORE Framework.
+ *
+ * The SCORE Framework and all its parts are free software: you can redistribute
+ * them and/or modify them under the terms of the GNU Lesser General Public
+ * License version 3 as published by the Free Software Foundation which is in the
+ * file named COPYING.LESSER.txt.
+ *
+ * The SCORE Framework and all its parts are distributed without any WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. For more details see the GNU Lesser General Public
+ * License.
+ *
+ * If you have not received a copy of the GNU Lesser General Public License see
+ * http://www.gnu.org/licenses/.
+ *
+ * The License-Agreement realised between you as Licensee and STRG.AT GmbH as
+ * Licenser including the issue of its valid conclusion and its pre- and
+ * post-contractual effects is governed by the laws of Austria. Any disputes
+ * concerning this License-Agreement including the issue of its valid conclusion
+ * and its pre- and post-contractual effects are exclusively decided by the
+ * competent court, in whose district STRG.AT GmbH has its registered seat, at
+ * the discretion of STRG.AT GmbH also the competent court, in whose district the
+ * Licensee has his registered seat, an establishment or assets.
+ */
+
 define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css.js'], function(oop, BPromise, css) {
 
     'use strict';
@@ -29,12 +57,14 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 autoSlideSpeed: 2000,
                 infinite: false,
                 showButtons: true,
+                center: false,
                 breakpoints: {
                     'default': {}
                 }
             },
             _currentLeft: 0,
             _active: false,
+            _offset: 0,
         },
 
         __init__: function(self, slider, config) {
@@ -77,19 +107,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             if (self.config.autoSlide) {
                 self.startAutoSlide();
             }
-            self._currentLeft = -(self.width * self.config.slidesToShow);
-            // 0s transition don't trigger transitionEnd Event ;(
-            // so we use a Timeout else the transition is visible when we remove
-            // the *notransition* class in the same cycle
-
-            css.addClass(self.ul, 'notransition');
-            self._transform(self.ul, self._currentLeft);
-            setTimeout(function () {
-                css.removeClass(self.ul, 'notransition');
-                // trigger the _windowResized once to handle dom css node size changes
-                // this is a dirty workaround feel free to fix this problem :)
-                self.redraw();
-            }, 50);
+            // we need a redraw to prevent errors when not all css classes are
+            // applied and dom is not in the final stage.
+            setTimeout(self.redraw, 100);
         },
 
         _handleBreakPoint: function(self) {
@@ -116,14 +136,23 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         transition: function(self, from, to, isForward) {
-            var left = -self.width * to - (self.width * self.config.slidesToShow);
+            var left = -self.width * to - self.width * self.config.breakpoints.default['ui-slidesToShow'];
+            var transition;
             if (isForward && from > to) {
-                return self._nextTransition(left);
+                transition = self._nextTransition;
             } else if (!isForward && to > from) {
-                return self._prevTransition(left);
+                transition = self._prevTransition;
+            } else {
+                transition = self._defaultTransition;
             }
-
-            return self._defaultTransition(left);
+            if (self.slider.transitionPending()) {
+                return new BPromise(function(resolve, reject) {
+                    self.slider.transition.finally(resolve);
+                }).then(function() {
+                    return transition(left);
+                });
+            }
+            return transition(left);
         },
 
         _defaultTransition: function(self, left) {
@@ -287,16 +316,29 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _windowResized: function(self) {
             self._handleBreakPoint();
+            if (!self.slider.transitionPending()) {
+                return self.redraw();
+            }
+            self.slider.transition.then(function() {
+                self.redraw();
+            });
+
         },
 
         redraw: function(self) {
             self.width = parseInt(self.node.offsetWidth / self.config.slidesToShow);
+            self._offset = self.config.center ? (self.config.slidesToShow - 1) / 2 * self.width : 0;
+            self._currentLeft = -self.width * self.slider.currentSlideNum - self.width * self.config.breakpoints.default['ui-slidesToShow'];
+            self.ul.style.width = self.width * (self.config.nodes.length + self.config.breakpoints.default['ui-slidesToShow'] * 2) + 'px';
             var nodes =  self.ul.getElementsByClassName('slides__slide');
-            self.ul.style.width = self.width * (self.config.nodes.length + (self.config.breakpoints.default['ui-slidesToShow'] * 2)) + 'px';
             for (var i = 0; i < nodes.length; i++) {
                 nodes[i].style.width = self.width + 'px';
             }
-            self.transition(0, self.slider.currentSlideNum, true);
+            css.addClass(self.ul, 'notransition');
+            self._transform(self.ul, self._currentLeft);
+            setTimeout(function () {
+                css.removeClass(self.ul, 'notransition');
+            }, 50);
         },
 
         _touchStartHandler: function(self, event) {
@@ -405,9 +447,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         _transform: function(self, node, value) {
-            node.style.transform = 'translateX(' + value + 'px)';
-            node.style.webkitTransform = 'translateX(' + value + 'px)';
-            node.style.msTransform = 'translateX(' + value + 'px)';
+            node.style.transform = 'translateX(' + (value + self._offset)+ 'px)';
+            node.style.webkitTransform = 'translateX(' + (value + self._offset) + 'px)';
+            node.style.msTransform = 'translateX(' + (value + self._offset) + 'px)';
         },
 
         startAutoSlide: function(self) {

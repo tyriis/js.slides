@@ -30,13 +30,15 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
 
     'use strict';
 
-    var _instances = [];
-
     return oop.Class({
         __name__: 'Slides',
 
         __static__: {
             _instances: [],
+            // this is not the best way.
+            // we need this feature to trigger a redraw of the ui when the
+            // ui.node or one of its parents is set to display: none;
+            // during initialization;
             getInstances: function(cls, node) {
                 if (!node) {
                     return cls._instances;
