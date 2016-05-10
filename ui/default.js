@@ -12,7 +12,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             'MozTransition': 'transitionend',
             'WebkitTransition': 'webkitTransitionEnd'
         };
-
         for (var t in transitions) {
             if (el.style[t] !== undefined) {
                 return transitions[t];
@@ -89,7 +88,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 css.removeClass(self.ul, 'notransition');
                 // trigger the _windowResized once to handle dom css node size changes
                 // this is a dirty workaround feel free to fix this problem :)
-                self._windowResized();
+                self.redraw();
             }, 50);
         },
 
@@ -288,10 +287,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _windowResized: function(self) {
             self._handleBreakPoint();
-            if (!self.node.offsetWidth) {
-                self.ul.style.width = '100%';
-            }
-            console.log(self.node.offsetWidth);
+        },
+
+        redraw: function(self) {
             self.width = parseInt(self.node.offsetWidth / self.config.slidesToShow);
             var nodes =  self.ul.getElementsByClassName('slides__slide');
             self.ul.style.width = self.width * (self.config.nodes.length + (self.config.breakpoints.default['ui-slidesToShow'] * 2)) + 'px';
@@ -299,7 +297,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 nodes[i].style.width = self.width + 'px';
             }
             self.transition(0, self.slider.currentSlideNum, true);
-
         },
 
         _touchStartHandler: function(self, event) {

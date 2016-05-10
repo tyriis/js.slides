@@ -30,12 +30,28 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
 
     'use strict';
 
+    var _instances = [];
+
     return oop.Class({
         __name__: 'Slides',
 
         __static__: {
+            _instances: [],
+            getInstances: function(cls, node) {
+                if (!node) {
+                    return cls._instances;
+                }
+                var nodeInstances = [];
+                for (var i = 0; i < cls._instances.length; i++) {
+                    var slideNode = cls._instances[i].ui.config.node;
+                    if (slideNode && (node === slideNode || node.contains(slideNode))) {
+                        nodeInstances.push(cls._instances[i]);
+                    }
+                }
+                return nodeInstances;
+            },
             config: {
-                slidesToScroll: 1,
+                slidesToScroll: 1
             }
         },
 
@@ -55,6 +71,7 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
             }
             self.currentSlideNum = 0;
             self.ui = new config.ui(self, uiconf);
+            self._instances.push(self);
         },
 
         next: function(self) {
@@ -122,7 +139,7 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
 
         transitionPending: function(self) {
             return self.transition && self.transition.isPending();
-        }
+        },
 
     });
 
