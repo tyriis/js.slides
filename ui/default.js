@@ -54,23 +54,23 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             _currentLeft: 0,
             _active: false,
             _offset: 0,
-        },
-
-        config: {
-            slidesToShow: 1,
-            autoSlide: false,
-            autoSlideSpeed: 2000,
-            infinite: false,
-            showButtons: true,
-            center: false,
-            delayInit: 200,
-            breakpoints: {
-                'default':  {}
-            }
+            _config: {
+                slidesToShow: 1,
+                autoSlide: false,
+                autoSlideSpeed: 2000,
+                infinite: false,
+                showButtons: true,
+                center: false,
+                delayInit: 200
+            },
         },
 
         __init__: function(self, slider, config) {
             self.slider = slider;
+            self.config = {breakpoints: { default: {}}};
+            for (var key in self._config) {
+                self.config[key] = self._config[key];
+            }
             for (var key in config) {
                 if (key === 'breakpoints') {
                     for (var breakpoint in config[key]) {
