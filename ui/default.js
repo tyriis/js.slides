@@ -63,6 +63,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             infinite: false,
             showButtons: true,
             center: false,
+            delayInit: 200,
             breakpoints: {
                 'default':  {}
             }
@@ -99,9 +100,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             window.addEventListener('resize', self._windowResized);
             if (isTouchDevice) {
-                self.slideWidth = parseInt(self.node.offsetWidth / self.config.slidesToShow);
+                self.slideWidth = self.width;
+                self.node.addEventListener('touchstart', self._touchStartHandler);
             }
-            self.node.addEventListener('touchstart', self._touchStartHandler);
             self.node.addEventListener('click', self._clickHandler);
             self.slider.on('transitionStart', self._transitionStartHandler);
             self.slider.on('transitionComplete', self._processQueued);
@@ -109,8 +110,8 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 self.startAutoSlide();
             }
             // we need a redraw to prevent errors when not all css classes are
-            // applied and dom is not in the final stage.
-            setTimeout(self.redraw, 100);
+            // applied and dom is not in the final stage, we need the redraw also
+            setTimeout(self.redraw, self.config.delayInit);
         },
 
         _handleBreakPoint: function(self) {
