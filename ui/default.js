@@ -327,7 +327,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             setTimeout(function () {
                 css.removeClass(self.ul, 'notransition');
             }, 50);
-            console.log(self.transitionDuration);
         },
 
         _touchStartHandler: function(self, event) {
