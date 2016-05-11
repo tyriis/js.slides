@@ -32,6 +32,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
     var isTouchDevice = 'ontouchstart' in window;
 
+    var LAZYLOAD_AGGRESSIVE = 'aggressive';
+    var LAZYLOAD_PROGRESSIVE = 'progressive';
+
     return oop.Class({
         __name__: 'DefaultSlidesUI',
 
@@ -46,6 +49,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 showButtons: true,
                 center: false,
                 delayInit: 200,
+                lazyLoad: LAZYLOAD_AGGRESSIVE
             },
         },
 
@@ -114,9 +118,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
             var conf = self.config.breakpoints[breakpoint];
             for (var key in conf) {
-                if (key.indexOf('ui-slidesToShow') === 0) {
-                    self.config.slidesToShow = conf[key];
-                } else if (key.indexOf('slidesToScroll') === 0) {
+                if (key.indexOf('ui-') === 0) {
+                    self.config[key.slice(3)] = conf[key];
+                } else {
                     self.slider.config[key] = conf[key];
                 }
             }
@@ -198,20 +202,26 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.config.nodes = Array.prototype.slice.call(self.config.nodes);
             for (var i = 0; i < self.config.nodes.length; i++) {
                 createLi(self.config.nodes[i]);
-                if (i < self.config.breakpoints.default['ui-slidesToShow'] + self.slider.config.slidesToScroll ||
-                    i >= self.config.nodes.length - self.slider.config.slidesToScroll) {
-                        self._lazyLoad(self.slideNodes[i]);
+                var lazyLoad = i < self.config.breakpoints.default['ui-slidesToShow'];
+                if (self.config.lazyLoad === LAZYLOAD_AGGRESSIVE) {
+                    lazyLoad = i < self.config.breakpoints.default['ui-slidesToShow'] + self.slider.config.slidesToScroll ||
+                        i >= self.config.nodes.length - self.slider.config.slidesToScroll
+                }
+                if (lazyLoad) {
+                    self._lazyLoad(self.slideNodes[i]);
                 }
             }
             var firstNode = self.ul.firstChild;
             for (var i = 0; i < self.slideNodes.length; i++) {
+                var clone;
                 if (i < self.config.breakpoints.default['ui-slidesToShow']) {
-                    var clone = self.slideNodes[i].cloneNode(true);
+                    clone = self.slideNodes[i].cloneNode(true);
                     self.ul.appendChild(clone);
-                    self._lazyLoad(clone);
                 } else if (i >= (self.slideNodes.length - self.config.breakpoints.default['ui-slidesToShow'])) {
-                    var clone = self.slideNodes[i].cloneNode(true);
+                    clone = self.slideNodes[i].cloneNode(true);
                     self.ul.insertBefore(clone, firstNode);
+                }
+                if (clone && self.config.lazyLoad === LAZYLOAD_AGGRESSIVE) {
                     self._lazyLoad(clone);
                 }
             }
@@ -253,11 +263,17 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _lazyLoadImages: function(self, event) {
             if (event.current > event.next) {
+                if (self.lazyLoad === LAZYLOAD_PROGRESSIVE) {
+                    return;
+                }
                 for (var i = (event.next - self.slider.config.slidesToScroll); i < event.next; i++) {
                     var node = self.slideNodes[i];
                     self._lazyLoad(node);
                 }
             } else if (event.next - event.current === self.slider.config.slidesToScroll) {
+                if (self.lazyLoad === LAZYLOAD_PROGRESSIVE) {
+                    return;
+                }
                 var first = event.next + self.config.slidesToShow;
                 for (var i = first; i < first + self.slider.config.slidesToScroll; i++) {
                     var node = self.slideNodes[i];
@@ -266,6 +282,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             } else if (event.next > event.current) {
                 for (var i = event.next; i < self.slideNodes.length; i++) {
                     self._lazyLoad(self.slideNodes[i]);
+                }
+                if (self.lazyLoad === LAZYLOAD_PROGRESSIVE) {
+                    return;
                 }
                 for (var i = event.next - self.slider.config.slidesToScroll; i < event.next; i++) {
                     self._lazyLoad(self.slideNodes[i]);
