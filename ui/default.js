@@ -51,26 +51,25 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         __name__: 'DefaultSlidesUI',
 
         __static__: {
-            baseconfig: {
-                slidesToShow: 1,
-                autoSlide: false,
-                autoSlideSpeed: 2000,
-                infinite: false,
-                showButtons: true,
-                center: false,
-            },
             _currentLeft: 0,
             _active: false,
             _offset: 0,
         },
 
+        config: {
+            slidesToShow: 1,
+            autoSlide: false,
+            autoSlideSpeed: 2000,
+            infinite: false,
+            showButtons: true,
+            center: false,
+            breakpoints: {
+                'default':  {}
+            }
+        },
+
         __init__: function(self, slider, config) {
             self.slider = slider;
-            self.config = {}
-            for (var key in self.baseconfig) {
-                self.config[key] = self.baseconfig[key]
-            }
-            self.config.breakpoints = {'default': {}};
             for (var key in config) {
                 if (key === 'breakpoints') {
                     for (var breakpoint in config[key]) {
@@ -80,7 +79,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 }
                 self.config[key] = config[key];
             }
-
             self.config.breakpoints.default['slidesToScroll'] = self.slider.config.slidesToScroll;
             self.config.breakpoints.default['ui-slidesToShow'] = self.config.breakpoints.default['ui-slidesToShow'] ? self.config.breakpoints.default['ui-slidesToShow'] : self.config.slidesToShow;
             self.node = config.node;
