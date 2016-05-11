@@ -52,7 +52,7 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
                 }
                 return nodeInstances;
             },
-            config: {
+            baseconfig: {
                 slidesToScroll: 1
             }
         },
@@ -64,6 +64,10 @@ define('lib/score/slides/slides', ['lib/score/oop', 'lib/bluebird'], function(oo
         ],
 
         __init__: function(self, config) {
+            self.config = {};
+            for (var key in self.baseconfig) {
+                self.config[key] = self.baseconfig[key];
+            }
             var uiconf = {};
             for (var key in config) {
                 if (key.indexOf('ui-') === 0) {
