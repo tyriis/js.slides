@@ -151,10 +151,22 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         },
 
         _nextTransition: function(self, left) {
+            return self._jumpTransition(left, true);
+        },
+
+        _prevTransition: function(self, left) {
+            return self._jumpTransition(left, false);
+        },
+
+        _jumpTransition: function(self, left, isForward) {
+            var _left = self.slider.config.slidesToScroll * self.width;
+            if (!isForward) {
+                _left = -_left;
+            }
             return new BPromise(function(resolve, reject) {
                  new BPromise(function (resolve, reject) {
                     css.addClass(self.ul, 'notransition');
-                    self._transform(self.ul, left + (self.slider.config.slidesToScroll * self.width));
+                    self._transform(self.ul, left + _left);
                     setTimeout(resolve, 10);
                 }).then(function () {
                     css.removeClass(self.ul, 'notransition');
@@ -163,23 +175,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                     setTimeout(resolve, self.transitionDuration);
                 });
             });
-        },
-
-        _prevTransition: function(self, left) {
-            return new BPromise(function(resolve, reject) {
-                setTimeout(function() {
-                    new BPromise(function(resolve, reject) {
-                        css.addClass(self.ul, 'notransition');
-                        self._transform(self.ul, left);
-                        self._currentLeft = left;
-                        setTimeout(resolve, 10);
-                    }).then(function() {
-                        css.removeClass(self.ul, 'notransition');
-                        resolve();
-                    });
-                }, self.animationDuration);
-                self._transform(self.ul, self._currentLeft + (self.width * self.slider.config.slidesToScroll));
-            })
         },
 
         numSlides: function(self) {
@@ -320,8 +315,8 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.initialLeft = self._currentLeft;
             self.initialMouseLeft = self._touchLocation(event)[0];
             self.initialMouseTop = self._touchLocation(event)[1];
-            self.maxLeftDistance = self.slideWidth * (self.slider.isFirstSlide() ? 0.1 : 1.1);
-            self.maxRightDistance = self.slideWidth * (self.slider.isLastSlide() ? 0.1 : 1.1);
+            self.maxLeftDistance = self.slideWidth * (self.slider.isFirstSlide() && !self.config.infinite ? 0.1 : 1.1);
+            self.maxRightDistance = self.slideWidth * (self.slider.isLastSlide() && !self.config.infinite ? 0.1 : 1.1);
             self.node.addEventListener('touchmove', self._touchMoveInit);
         },
 
@@ -353,9 +348,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _touchMoveHandler: function(self, event) {
             var currentMouseLeft = self._touchLocation(event)[0];
-            var distance = currentMouseLeft - self.initialMouseLeft,
-                relativeDistance,
-                adjustedDistance;
+            var distance = currentMouseLeft - self.initialMouseLeft;
+            var relativeDistance;
+            var adjustedDistance;
             if (distance < 0) {
                 relativeDistance = Math.min(1, -distance / self.maxRightDistance);
                 adjustedDistance = -self.maxRightDistance * (1 - Math.pow(1 - relativeDistance, 3));
@@ -372,9 +367,9 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             document.removeEventListener('touchcancel', self._touchCancelHandler);
             self.node.removeEventListener('touchmove', self._touchMoveHandler);
             if (self._touchLocation(event)[0] != self.initialMouseLeft) {
-                if (self._touchLocation(event)[0] > self.initialMouseLeft && self.slider.currentSlideNum - 1 >= 0) {
+                if (self._touchLocation(event)[0] > self.initialMouseLeft && (self.config.infinite || self.slider.currentSlideNum - 1 >= 0)) {
                     self.prev(event);
-                } else if (self._touchLocation(event)[0] < self.initialMouseLeft && self.slider.currentSlideNum + 1 < self.slider.numSlides()) {
+                } else if (self._touchLocation(event)[0] < self.initialMouseLeft && (self.config.infinite || self.slider.currentSlideNum + 1 < self.slider.numSlides())) {
                     self.next(event);
                 } else {
                     self._resetSlidePosition();
@@ -493,7 +488,5 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
         _lazyLoad: function(self, node) {
             // extend the default UI to handle lazyLoad with a library / script of your choice
         }
-
     });
-
 });
