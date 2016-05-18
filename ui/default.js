@@ -202,14 +202,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             self.config.nodes = Array.prototype.slice.call(self.config.nodes);
             for (var i = 0; i < self.config.nodes.length; i++) {
                 createLi(self.config.nodes[i]);
-                var lazyLoad = i < self.config.breakpoints.default['ui-slidesToShow'];
-                if (self.config.lazyLoad === LAZYLOAD_AGGRESSIVE) {
-                    lazyLoad = i < self.config.breakpoints.default['ui-slidesToShow'] + self.slider.config.slidesToScroll ||
-                        i >= self.config.nodes.length - self.slider.config.slidesToScroll
-                }
-                if (lazyLoad) {
-                    self._lazyLoad(self.slideNodes[i]);
-                }
             }
             var firstNode = self.ul.firstChild;
             for (var i = 0; i < self.slideNodes.length; i++) {
@@ -220,9 +212,6 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
                 } else if (i >= (self.slideNodes.length - self.config.breakpoints.default['ui-slidesToShow'])) {
                     clone = self.slideNodes[i].cloneNode(true);
                     self.ul.insertBefore(clone, firstNode);
-                }
-                if (clone && self.config.lazyLoad === LAZYLOAD_AGGRESSIVE) {
-                    self._lazyLoad(clone);
                 }
             }
         },
@@ -245,7 +234,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
 
         _transitionStartHandler: function(self, event) {
             self._updateButtons(event);
-            self._lazyLoadImages(event);
+            self._lazyLoadImages(self.slideNodes[event.next]);
         },
 
         _updateButtons: function(self, event) {
@@ -261,39 +250,63 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             }
         },
 
-        _lazyLoadImages: function(self, event) {
-            if (event.current > event.next) {
-                if (self.lazyLoad === LAZYLOAD_PROGRESSIVE) {
-                    return;
-                }
-                for (var i = (event.next - self.slider.config.slidesToScroll); i < event.next; i++) {
-                    var node = self.slideNodes[i];
-                    self._lazyLoad(node);
-                }
-            } else if (event.next - event.current === self.slider.config.slidesToScroll) {
-                if (self.lazyLoad === LAZYLOAD_PROGRESSIVE) {
-                    return;
-                }
-                var first = event.next + self.config.slidesToShow;
-                for (var i = first; i < first + self.slider.config.slidesToScroll; i++) {
-                    var node = self.slideNodes[i];
-                    self._lazyLoad(node);
-                }
-            } else if (event.next > event.current) {
-                for (var i = event.next; i < self.slideNodes.length; i++) {
-                    self._lazyLoad(self.slideNodes[i]);
-                }
-                if (self.lazyLoad === LAZYLOAD_PROGRESSIVE) {
-                    return;
-                }
-                for (var i = event.next - self.slider.config.slidesToScroll; i < event.next; i++) {
-                    self._lazyLoad(self.slideNodes[i]);
-                }
-            } else {
-                for (var i = event.next; i < (event.next + self.config.slidesToShow + self.slider.config.slidesToScroll); i++) {
-                    self._lazyLoad(self.slideNodes[i]);
-                }
+        _lazyLoadImages: function(self, refNode) {
+            var nodes = self._getSlideNodesInView(refNode);
+            self._lazyLoadNodes(nodes);
+            if (self.config.lazyLoad === LAZYLOAD_AGGRESSIVE) {
+                self._lazyLoadNodes(self._getSlideNodesBefore(nodes[0]));
+                self._lazyLoadNodes(self._getSlideNodesAfter(nodes[nodes.length - 1]));
             }
+        },
+
+        _lazyLoadNodes: function(self, nodes) {
+            for (var i = 0; i < nodes.length; i++) {
+                self._lazyLoad(nodes[i]);
+            }
+        },
+
+        _getSlideNodesInView: function(self, refNode) {
+            var numNodesInView = self.config.center && self.config.slidesToShow % 2 == 0 ? self.config.slidesToShow + 1 : self.config.slidesToShow;
+            var nodesInView = [];
+            var node = refNode;
+            nodesInView.push(node);
+            if (self.config.center) {
+                for (var i = 0; i < (numNodesInView - 1) / 2; i++) {
+                    node = node.previousElementSibling;
+                    nodesInView.push(node);
+                }
+                nodesInView = nodesInView.reverse();
+                node = nodesInView[nodesInView.length - 1];
+            }
+            for (var i = nodesInView.length; i < numNodesInView; i++) {
+                node = node.nextElementSibling;
+                nodesInView.push(node);
+            }
+            return nodesInView;
+        },
+
+        _getSlideNodesBefore: function(self, node) {
+            var nodes = [];
+            for (var i = 0; i < self.slider.config.slidesToScroll; i++) {
+                node = node.previousElementSibling;
+                if (!node) {
+                    break;
+                }
+                nodes.push(node);
+            }
+            return nodes.reverse();
+        },
+
+        _getSlideNodesAfter: function(self, node) {
+            var nodes = [];
+            for (var i = 0; i < self.slider.config.slidesToScroll; i++) {
+                node = node.nextElementSibling;
+                if (!node) {
+                    break;
+                }
+                nodes.push(node);
+            }
+            return nodes;
         },
 
         _windowResized: function(self) {
@@ -327,6 +340,7 @@ define('lib/score/slides/ui/default', ['lib/score/oop', 'lib/bluebird', 'lib/css
             setTimeout(function () {
                 css.removeClass(self.ul, 'notransition');
             }, 50);
+            self._lazyLoadImages(self.slideNodes[self.slider.currentSlideNum]);
         },
 
         _touchStartHandler: function(self, event) {
